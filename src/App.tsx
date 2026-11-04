@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import Auth from './Auth'
+import Shell from './Shell'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -20,9 +21,9 @@ export default function App() {
   if (!session) return <Auth />
 
   return (
-    <div className="center">
-      <p>ログイン中:{session.user.email}</p>
-      <button onClick={() => supabase.auth.signOut()}>ログアウト</button>
-    </div>
-  )
+  <Shell
+    email={session.user.email ?? ''}
+    onSignOut={() => supabase.auth.signOut()}
+  />
+)
 }
