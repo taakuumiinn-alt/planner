@@ -3,6 +3,8 @@ import CalendarScreen from './screens/CalendarScreen'
 import ListScreen from './screens/ListScreen'
 import AddMenu from './components/AddMenu'
 import TodoEditor from './components/TodoEditor'
+import EventEditor from './components/EventEditor'
+import { todayStr } from './lib/date'
 
 type Tab = 'calendar' | 'list'
 const KEY = 'planner:lastTab'
@@ -19,6 +21,8 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
   const [tab, setTab] = useState<Tab>(loadTab)
   const [menuOpen, setMenuOpen] = useState(false)
   const [addingTodo, setAddingTodo] = useState(false)
+  const [addingEvent, setAddingEvent] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
 
@@ -37,9 +41,15 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
       setAddingTodo(true)
       return
     }
+    if (label === '予定を追加') {
+      setAddingEvent(true)
+      return
+    }
     setToast(`「${label}」は次のステップで実装します`)
     setTimeout(() => setToast(''), 2500)
   }
+
+  const bump = () => setReloadKey((k) => k + 1)
 
   return (
     <div className="shell">
@@ -52,7 +62,11 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
 
       <main className="content">
         {tab === 'calendar' ? (
-          <CalendarScreen />
+          <CalendarScreen
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            reloadKey={reloadKey}
+          />
         ) : (
           <ListScreen email={email} onSignOut={onSignOut} reloadKey={reloadKey} />
         )}
@@ -74,7 +88,18 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
           onClose={() => setAddingTodo(false)}
           onSaved={() => {
             setAddingTodo(false)
-            setReloadKey((k) => k + 1)
+            bump()
+          }}
+        />
+      )}
+      {addingEvent && (
+        <EventEditor
+          event={null}
+          defaultDate={selectedDate ?? todayStr()}
+          onClose={() => setAddingEvent(false)}
+          onSaved={() => {
+            setAddingEvent(false)
+            bump()
           }}
         />
       )}

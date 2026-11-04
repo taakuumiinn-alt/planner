@@ -175,4 +175,35 @@ input {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-}}
+}/* 月間カレンダー:1件1行・折り返さない・入りきらない文字は切れる */
+.cal { margin: 0 -8px; }
+.grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cell { min-height: 78px; padding: 3px 2px; min-width: 0; overflow: hidden; }
+.cell .num { display: block; padding-left: 2px; }
+.item {
+  font-size: 11px; line-height: 1.35; margin-top: 2px; padding: 0 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: clip; border-radius: 3px;
+}
+.item.td { background: transparent; }
+
+/* 日付タップで下からスライド */
+.daysheet { max-height: 70dvh; overflow-y: auto; }
+.daysheet h3 { margin: 0 0 4px; }
+.slideup { animation: slideup 0.22s ease-out; }
+@keyframes slideup { from { transform: translateY(100%); } to { transform: none; } }
+.drow { padding: 8px 10px; background: #1e1e33; border-radius: 8px; cursor: pointer; }
+.drow.todo { cursor: default; background: transparent; border: 1px solid #1f1f33; }
+.dtime { font-size: 12px; color: #8a8aa5; }
+.dname { font-size: 16px; overflow-wrap: anywhere; }
+
+/* 予定の詳細 */
+.dtitle { font-size: 20px; padding-left: 10px; overflow-wrap: anywhere; }
+.dline { margin: 0; color: #b8b8d0; font-size: 14px; }
+.ddetail { margin: 4px 0; white-space: pre-wrap; font-size: 15px; }
+
+/* カテゴリー管理 */
+.catrow { display: flex; align-items: center; gap: 8px; }
+.catrow .catname { flex: 1; }
+.dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.sep { border: 0; border-top: 1px solid #1f1f33; width: 100%; margin: 4px 0; }
+.mini.wide { width: 100%; padding: 8px; }}
