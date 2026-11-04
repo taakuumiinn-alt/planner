@@ -126,8 +126,9 @@ input {
 .logout {
   margin-top: 8px; padding: 10px 14px; border: 1px solid #2a2a40;
   border-radius: 10px; background: transparent; color: var(--text); font-size: 15px;
-.sheet.form { max-height: 88dvh; overflow-y: auto; }
-.sheet.form h3 { margin: 0 0 4px; }
+}
+
+.sheet.form { max-height: 88dvh; overflow-y: auto; }.sheet.form h3 { margin: 0 0 4px; }
 .sheet.form input, .sheet.form select, .sheet.form textarea {
   width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2a2a40;
   background: #10101a; color: var(--text); font-size: 16px; font-family: inherit;
@@ -206,4 +207,4 @@ input {
 .catrow .catname { flex: 1; }
 .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 .sep { border: 0; border-top: 1px solid #1f1f33; width: 100%; margin: 4px 0; }
-.mini.wide { width: 100%; padding: 8px; }}
+.mini.wide { width: 100%; padding: 8px; }
