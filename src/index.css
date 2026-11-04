@@ -1,0 +1,49 @@
+:root {
+  --bg: #0b0b12;
+  --card: #151521;
+  --text: #e8e8f2;
+  --accent: #8b5cf6;
+  --accent2: #22d3ee;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.auth, .center {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+}
+.auth h1 {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+input {
+  width: min(320px, 100%);
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #2a2a40;
+  background: var(--card);
+  color: var(--text);
+  font-size: 16px; /* iPhoneで入力時に拡大されないよう16px以上 */
+}
+button {
+  width: min(320px, 100%);
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+}
+button.link { background: transparent; color: var(--accent2); }
+button:disabled { opacity: 0.5; }
+.msg { max-width: 320px; color: var(--accent2); font-size: 14px; }
