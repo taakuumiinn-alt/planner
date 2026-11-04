@@ -1,9 +1,11 @@
-import type { Category, EventRow, Todo, TodoList } from '../lib/types'
+import type { Category, Todo, TodoList } from '../lib/types'
 import { fmtFull } from '../lib/date'
 import { eventColor, timeLabel, todoColor } from '../lib/calendar'
+import type { EventOcc } from '../lib/calendar'
 
 export default function DaySheet({
   date,
+  holiday,
   events,
   todos,
   cats,
@@ -12,20 +14,24 @@ export default function DaySheet({
   onClose,
 }: {
   date: string
-  events: EventRow[]
+  holiday?: string
+  events: EventOcc[]
   todos: Todo[]
   cats: Category[]
   lists: TodoList[]
-  onOpenEvent: (e: EventRow) => void
+  onOpenEvent: (e: EventOcc) => void
   onClose: () => void
 }) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="sheet daysheet slideup" onClick={(e) => e.stopPropagation()}>
-        <h3>{fmtFull(date)}</h3>
+        <h3>
+          {fmtFull(date)}
+          {holiday && <span className="holname"> {holiday}</span>}
+        </h3>
         {events.map((e) => (
           <div
-            key={e.id}
+            key={`${e.id}:${e.occ_date}`}
             className="drow"
             style={{ borderLeft: `4px solid ${eventColor(e, cats)}` }}
             onClick={() => onOpenEvent(e)}

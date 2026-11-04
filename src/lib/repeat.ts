@@ -1,4 +1,4 @@
-import { toDateStr } from './date'
+import { toDateStr, WEEKDAYS } from './date'
 
 export type RepeatRule = {
   freq: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -41,7 +41,7 @@ export const shiftIso = (iso: string, n: number) => {
   return d.toISOString()
 }
 
-const nextOnce = (r: RepeatRule, from: Date): Date => {
+export const nextOnce = (r: RepeatRule, from: Date): Date => {
   if (r.freq === 'daily') return addDays(from, r.interval)
 
   if (r.freq === 'weekly') {
@@ -84,4 +84,73 @@ export const nextDue = (r: RepeatRule, from: string, today: string): string | nu
     if (s >= today) return s
   }
   return null
+}
+  export type RepeatState = {
+  freq: '' | RepeatRule['freq']
+  interval: number
+  weekdays: number[]
+  monthdays: number[]
+  until: string
+}
+
+export const stateFromRule = (s: string | null): RepeatState => {
+  const r = parseRule(s)
+  return {
+    freq: r?.freq ?? '',
+    interval: r?.interval ?? 1,
+    weekdays: r?.weekdays ?? [],
+    monthdays: r?.monthdays ?? [],
+    until: r?.until ?? '',
+  }
+}
+
+export const buildRule = (st: RepeatState, baseDate: string): string | null => {
+  if (!st.freq) return null
+  const base = parseDate(baseDate)
+  const rule: RepeatRule = {
+    freq: st.freq,
+    interval: Math.max(1, st.interval || 1),
+    weekdays: st.freq === 'weekly' ? (st.weekdays.length ? st.weekdays : [base.getDay()]) : [],
+    monthdays: st.freq === 'monthly' ? (st.monthdays.length ? st.monthdays : [base.getDate()]) : [],
+    until: st.until || null,
+  }
+  return JSON.stringify(rule)
+}
+
+export const describeRule = (s: string | null): string => {
+  const r = parseRule(s)
+  if (!r) return ''
+  const n = r.interval
+  let t = ''
+  if (r.freq === 'daily') t = n === 1 ? '毎日' : `${n}日ごと`
+  else if (r.freq === 'weekly')
+    t =
+      (n === 1 ? '毎週' : `${n}週間ごと`) +
+      (r.weekdays.length ? ' ' + r.weekdays.map((d) => WEEKDAYS[d]).join('・') : '')
+  else if (r.freq === 'monthly')
+    t =
+      (n === 1 ? '毎月' : `${n}か月ごと`) +
+      (r.monthdays.length ? ' ' + r.monthdays.join('・') + '日' : '')
+  else t = n === 1 ? '毎年' : `${n}年ごと`
+  return r.until ? `${t}(${r.until}まで)` : t
+}
+
+// 開始日 baseDate の繰り返し予定のうち、from〜to の範囲に入る日付を返す
+export const occurrencesBetween = (
+  baseDate: string,
+  rule: RepeatRule | null,
+  from: string,
+  to: string,
+): string[] => {
+  if (!rule) return baseDate >= from && baseDate <= to ? [baseDate] : []
+  const out: string[] = []
+  const limit = rule.until && rule.until < to ? rule.until : to
+  let cur = parseDate(baseDate)
+  for (let i = 0; i < 5000; i++) {
+    const s = toDateStr(cur)
+    if (s > limit) break
+    if (s >= from) out.push(s)
+    cur = nextOnce(rule, cur)
+  }
+  return out
 }

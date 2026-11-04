@@ -1,3 +1,5 @@
+
+import { SettingsProvider } from './lib/settings'
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
@@ -21,9 +23,11 @@ export default function App() {
   if (!session) return <Auth />
 
   return (
-  <Shell
-    email={session.user.email ?? ''}
-    onSignOut={() => supabase.auth.signOut()}
-  />
-)
+    <SettingsProvider userId={session.user.id}>
+      <Shell
+        email={session.user.email ?? ''}
+        onSignOut={() => supabase.auth.signOut()}
+      />
+    </SettingsProvider>
+  )
 }

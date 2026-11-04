@@ -3,7 +3,10 @@ import { supabase } from '../lib/supabase'
 import { CAT_COLS } from '../lib/types'
 import type { Category, EventRow } from '../lib/types'
 import { hhmm } from '../lib/date'
+import { buildRule, stateFromRule } from '../lib/repeat'
+import type { RepeatState } from '../lib/repeat'
 import CategoryManager from './CategoryManager'
+import RepeatFields from './RepeatFields'
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return ''
@@ -14,27 +17,31 @@ const toLocalInput = (iso: string | null) => {
 
 export default function EventEditor({
   event,
+  template,
   defaultDate,
   onClose,
   onSaved,
 }: {
   event: EventRow | null
+  template?: EventRow | null // 複製のとき、元の予定を渡す
   defaultDate: string
   onClose: () => void
   onSaved: () => void
 }) {
+  const src = event ?? template ?? null
   const [cats, setCats] = useState<Category[]>([])
-  const [title, setTitle] = useState(event?.title ?? '')
-  const [detail, setDetail] = useState(event?.detail ?? '')
-  const [date, setDate] = useState(event?.event_date ?? defaultDate)
-  const [allDay, setAllDay] = useState(event?.all_day ?? false)
-  const [start, setStart] = useState(hhmm(event?.start_time ?? null))
-  const [end, setEnd] = useState(hhmm(event?.end_time ?? null))
-  const [catId, setCatId] = useState(event?.category_id ?? '')
-  const [useColor, setUseColor] = useState(!!event?.color)
-  const [color, setColor] = useState(event?.color ?? '#8b5cf6')
-  const [notify, setNotify] = useState(event?.notify_enabled ?? false)
-  const [notifyAt, setNotifyAt] = useState(toLocalInput(event?.notify_at ?? null))
+  const [title, setTitle] = useState(src?.title ?? '')
+  const [detail, setDetail] = useState(src?.detail ?? '')
+  const [date, setDate] = useState(src?.event_date ?? defaultDate)
+  const [allDay, setAllDay] = useState(src?.all_day ?? false)
+  const [start, setStart] = useState(hhmm(src?.start_time ?? null))
+  const [end, setEnd] = useState(hhmm(src?.end_time ?? null))
+  const [catId, setCatId] = useState(src?.category_id ?? '')
+  const [useColor, setUseColor] = useState(!!src?.color)
+  const [color, setColor] = useState(src?.color ?? '#8b5cf6')
+  const [rep, setRep] = useState<RepeatState>(stateFromRule(src?.repeat_rule ?? null))
+  const [notify, setNotify] = useState(src?.notify_enabled ?? false)
+  const [notifyAt, setNotifyAt] = useState(toLocalInput(src?.notify_at ?? null))
   const [manage, setManage] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -56,6 +63,7 @@ export default function EventEditor({
     if (!title.trim()) return setError('予定名を入力してください')
     if (!date) return setError('日付を設定してください')
     if (!allDay && start && end && end < start) return setError('終了時刻が開始時刻より前です')
+    if (rep.freq && rep.until && rep.until < date) return setError('繰り返しの終了日が開始日より前です')
     if (notify && !notifyAt) return setError('通知の日時を設定してください')
     setBusy(true)
     const row = {
@@ -67,6 +75,7 @@ export default function EventEditor({
       end_time: allDay ? null : end || null,
       category_id: catId || null,
       color: useColor ? color : null,
+      repeat_rule: buildRule(rep, date),
       notify_enabled: notify,
       notify_at: notify && notifyAt ? new Date(notifyAt).toISOString() : null,
     }
@@ -80,7 +89,10 @@ export default function EventEditor({
 
   const remove = async () => {
     if (!event) return
-    if (!window.confirm('この予定を削除しますか?(ゴミ箱機能は後で追加します。今は非表示になります)')) return
+    const msg = event.repeat_rule
+      ? 'この繰り返し予定をすべて削除しますか?(今は非表示になります)'
+      : 'この予定を削除しますか?(ゴミ箱機能は後で追加します。今は非表示になります)'
+    if (!window.confirm(msg)) return
     const { error } = await supabase
       .from('events')
       .update({ deleted_at: new Date().toISOString() })
@@ -93,7 +105,7 @@ export default function EventEditor({
     <>
       <div className="overlay" onClick={onClose}>
         <div className="sheet form" onClick={(e) => e.stopPropagation()}>
-          <h3>{event ? '予定を編集' : '予定を追加'}</h3>
+          <h3>{event ? '予定を編集' : template ? '予定を複製' : '予定を追加'}</h3>
           <input placeholder="予定名" value={title} onChange={(e) => setTitle(e.target.value)} />
           <textarea
             placeholder="詳細説明(任意)"
@@ -102,7 +114,7 @@ export default function EventEditor({
             onChange={(e) => setDetail(e.target.value)}
           />
           <label>
-            日付
+            {rep.freq ? '開始日(繰り返しの最初の日)' : '日付'}
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
           <label className="check">
@@ -121,6 +133,7 @@ export default function EventEditor({
               </label>
             </>
           )}
+          <RepeatFields value={rep} onChange={setRep} />
           <label>
             カテゴリー
             <select value={catId} onChange={(e) => setCatId(e.target.value)}>
@@ -139,9 +152,7 @@ export default function EventEditor({
             <input type="checkbox" checked={useColor} onChange={(e) => setUseColor(e.target.checked)} />
             この予定だけ個別の色にする
           </label>
-          {useColor && (
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-          )}
+          {useColor && <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />}
           <label className="check">
             <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
             通知する

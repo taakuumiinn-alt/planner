@@ -208,3 +208,24 @@ input {
 .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 .sep { border: 0; border-top: 1px solid #1f1f33; width: 100%; margin: 4px 0; }
 .mini.wide { width: 100%; padding: 8px; }
+/* 色は設定から指定するため、クラスの色指定は使わない */
+.cell .num { font-weight: 600; }
+.hol { font-size: 10px; line-height: 1.2; padding-left: 2px; white-space: nowrap; overflow: hidden; }
+.cell.over { box-shadow: inset 0 0 0 2px var(--accent2); background: #1b2a3a; }
+.item.ev {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  cursor: grab;
+}
+.dragov { width: 96px; box-shadow: 0 6px 18px rgba(139, 92, 246, 0.5); }
+
+.wlist { display: flex; flex-direction: column; gap: 10px; padding: 0 8px; }
+.wday { background: var(--card); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.wday.today { box-shadow: inset 0 0 0 1px var(--accent); }
+.whead { font-weight: 600; cursor: pointer; }
+.holname { font-size: 13px; font-weight: 400; }
+.menutitle { padding: 4px 6px 8px; color: #b8b8d0; overflow-wrap: anywhere; }
+.sheet button.danger { background: transparent; color: #f87171; }
+
+.colorgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.colorgrid label { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; color: #8a8aa5; }
+.colorgrid input[type='color'] { width: 44px; height: 36px; padding: 2px; }

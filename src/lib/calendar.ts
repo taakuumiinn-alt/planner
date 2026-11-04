@@ -26,3 +26,4 @@ export const timeLabel = (e: EventRow) => {
   if (!e.start_time) return '時間なし'
   return `${hhmm(e.start_time)}${e.end_time ? ' – ' + hhmm(e.end_time) : ''}`
 }
+export type EventOcc = EventRow & { occ_date: string }

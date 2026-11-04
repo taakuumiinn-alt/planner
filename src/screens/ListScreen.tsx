@@ -1,3 +1,5 @@
+
+import ColorSettings from '../components/ColorSettings'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { LIST_COLS, TODO_COLS } from '../lib/types'
@@ -32,6 +34,7 @@ export default function ListScreen({
       supabase.from('todo_lists').select(LIST_COLS).is('deleted_at', null).order('sort_order'),
       supabase.from('todos').select(TODO_COLS).is('deleted_at', null).order('sort_order'),
     ])
+
     if (l.error || t.error) {
       setError((l.error ?? t.error)!.message)
     } else {
@@ -39,6 +42,7 @@ export default function ListScreen({
       setLists((l.data ?? []) as TodoList[])
       setTodos((t.data ?? []) as Todo[])
     }
+
     setLoading(false)
   }, [])
 
@@ -47,14 +51,25 @@ export default function ListScreen({
   }, [load, reloadKey])
 
   const today = todayStr()
-  const colorOf = (t: Todo) => lists.find((l) => l.id === t.list_id)?.color ?? DEFAULT_COLOR
-  const byDue = (a: Todo, b: Todo) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
+
+  const colorOf = (t: Todo) =>
+    lists.find((l) => l.id === t.list_id)?.color ?? DEFAULT_COLOR
+
+  const byDue = (a: Todo, b: Todo) =>
+    (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
 
   const reorderTodo = async (id: string, order: number) => {
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, sort_order: order } : t)).sort((a, b) => a.sort_order - b.sort_order),
+      prev
+        .map((t) => (t.id === id ? { ...t, sort_order: order } : t))
+        .sort((a, b) => a.sort_order - b.sort_order),
     )
-    const { error } = await supabase.from('todos').update({ sort_order: order }).eq('id', id)
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ sort_order: order })
+      .eq('id', id)
+
     if (error) {
       setError(error.message)
       load()
@@ -63,9 +78,16 @@ export default function ListScreen({
 
   const reorderList = async (id: string, order: number) => {
     setLists((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, sort_order: order } : l)).sort((a, b) => a.sort_order - b.sort_order),
+      prev
+        .map((l) => (l.id === id ? { ...l, sort_order: order } : l))
+        .sort((a, b) => a.sort_order - b.sort_order),
     )
-    const { error } = await supabase.from('todo_lists').update({ sort_order: order }).eq('id', id)
+
+    const { error } = await supabase
+      .from('todo_lists')
+      .update({ sort_order: order })
+      .eq('id', id)
+
     if (error) {
       setError(error.message)
       load()
@@ -75,9 +97,12 @@ export default function ListScreen({
   const createNext = async (t: Todo) => {
     const rule = parseRule(t.repeat_rule)
     if (!rule || !t.due_date) return
+
     const next = nextDue(rule, t.due_date, today)
     if (!next) return
+
     const diff = diffDays(t.due_date, next)
+
     const { error } = await supabase.from('todos').insert({
       list_id: t.list_id,
       title: t.title,
@@ -91,40 +116,63 @@ export default function ListScreen({
       notify_at: t.notify_at ? shiftIso(t.notify_at, diff) : null,
       remind_days_before: t.remind_days_before,
     })
+
     if (error) setError(error.message)
   }
 
   const complete = async (t: Todo) => {
     const list = lists.find((l) => l.id === t.list_id)
+
     if (list && !list.done_list_name) {
-      const name = window.prompt(`「${list.name}」の完了済みリストの名前を入力してください`)
+      const name = window.prompt(
+        `「${list.name}」の完了済みリストの名前を入力してください`,
+      )
+
       if (name && name.trim()) {
-        await supabase.from('todo_lists').update({ done_list_name: name.trim() }).eq('id', list.id)
+        await supabase
+          .from('todo_lists')
+          .update({ done_list_name: name.trim() })
+          .eq('id', list.id)
       }
     }
+
     const overdue = !!t.due_date && t.due_date < today
+
     const { error } = await supabase
       .from('todos')
-      .update({ completed_at: new Date().toISOString(), was_overdue: overdue })
+      .update({
+        completed_at: new Date().toISOString(),
+        was_overdue: overdue,
+      })
       .eq('id', t.id)
+
     if (error) {
       setError(error.message)
       return
     }
+
     if (t.repeat_rule) await createNext(t)
+
     load()
   }
 
   const undo = async (t: Todo) => {
-    const { error } = await supabase.from('todos').update({ completed_at: null }).eq('id', t.id)
+    const { error } = await supabase
+      .from('todos')
+      .update({ completed_at: null })
+      .eq('id', t.id)
+
     if (error) {
       setError(error.message)
       return
     }
-    // 繰り返しToDoは、完了時に作られた次回分を取り消す(二重にならないように)
+
+    // 繰り返しToDoは、完了時に作られた次回分を取り消す
     const rule = parseRule(t.repeat_rule)
+
     if (rule && t.due_date) {
       const next = nextDue(rule, t.due_date, today)
+
       const dup = todos.find(
         (x) =>
           !x.completed_at &&
@@ -134,32 +182,68 @@ export default function ListScreen({
           x.repeat_rule === t.repeat_rule &&
           x.due_date === next,
       )
+
       if (dup) {
-        await supabase.from('todos').update({ deleted_at: new Date().toISOString() }).eq('id', dup.id)
+        await supabase
+          .from('todos')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', dup.id)
       }
     }
+
     load()
   }
 
   const active = todos.filter((t) => !t.completed_at)
   const done = todos.filter((t) => t.completed_at)
-  const overdue = active.filter((t) => t.due_date && t.due_date < today).sort(byDue)
-  const todayOnly = active.filter((t) => t.date_only && t.due_date === today)
-  const rest = active.filter((t) => !overdue.includes(t) && !todayOnly.includes(t))
-  const lower = rest.filter((t) => t.date_only || !t.list_id).sort(byDue)
 
-  const row = (t: Todo, completedView = false, handle?: HandleProps) => (
-        <div key={t.id} className="trow" {...handle}>
+  const overdue = active
+    .filter((t) => t.due_date && t.due_date < today)
+    .sort(byDue)
+
+  const todayOnly = active.filter(
+    (t) => t.date_only && t.due_date === today,
+  )
+
+  const rest = active.filter(
+    (t) => !overdue.includes(t) && !todayOnly.includes(t),
+  )
+
+  const lower = rest
+    .filter((t) => t.date_only || !t.list_id)
+    .sort(byDue)
+
+  const row = (
+    t: Todo,
+    completedView = false,
+    handle?: HandleProps,
+  ) => (
+    <div key={t.id} className="trow" {...handle}>
       <button
         className="circle"
-        style={{ borderColor: colorOf(t), background: completedView ? colorOf(t) : 'transparent' }}
+        style={{
+          borderColor: colorOf(t),
+          background: completedView ? colorOf(t) : 'transparent',
+        }}
         aria-label={completedView ? '未完了に戻す' : '完了にする'}
-        onClick={() => (completedView ? undo(t) : complete(t))}
+        onClick={() =>
+          completedView ? undo(t) : complete(t)
+        }
       />
+
       <div className="tmain" onClick={() => setEditTodo(t)}>
-        <div className={completedView ? 'ttitle done' : 'ttitle'}>{t.title}</div>
+        <div className={completedView ? 'ttitle done' : 'ttitle'}>
+          {t.title}
+        </div>
+
         {(t.due_date || t.start_date) && (
-          <div className={!completedView && t.due_date && t.due_date < today ? 'tdue late' : 'tdue'}>
+          <div
+            className={
+              !completedView && t.due_date && t.due_date < today
+                ? 'tdue late'
+                : 'tdue'
+            }
+          >
             {t.start_date ? `${fmt(t.start_date)} → ` : ''}
             {t.due_date ? fmt(t.due_date) : ''}
             {t.date_only ? '(日付限定)' : ''}
@@ -175,14 +259,22 @@ export default function ListScreen({
   const groups = [
     ...lists.map((l) => ({
       key: l.id,
-      title: l.done_list_name ?? `${l.name}(完了済みの名前が未設定)`,
+      title:
+        l.done_list_name ??
+        `${l.name}(完了済みの名前が未設定)`,
       items: done.filter((t) => t.list_id === l.id),
     })),
-    { key: 'none', title: 'リスト未所属の完了済み', items: done.filter((t) => !t.list_id) },
+    {
+      key: 'none',
+      title: 'リスト未所属の完了済み',
+      items: done.filter((t) => !t.list_id),
+    },
   ]
     .map((g) => ({
       ...g,
-      items: [...g.items].sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? '')),
+      items: [...g.items].sort((a, b) =>
+        (b.completed_at ?? '').localeCompare(a.completed_at ?? ''),
+      ),
     }))
     .filter((g) => g.items.length > 0)
 
@@ -210,21 +302,36 @@ export default function ListScreen({
         items={lists}
         onReorder={reorderList}
         render={(l, handle) => {
-          const items = rest.filter((t) => t.list_id === l.id && !t.date_only)
+          const items = rest.filter(
+            (t) => t.list_id === l.id && !t.date_only,
+          )
+
           return (
-            <section className="card" style={{ borderLeft: `4px solid ${l.color}` }}>
-                            <div className="chead" {...handle}>
+            <section
+              className="card"
+              style={{ borderLeft: `4px solid ${l.color}` }}
+            >
+              <div className="chead" {...handle}>
                 <h3>
                   {l.icon} {l.name}
                 </h3>
-                <button className="mini" onClick={() => setEditList(l)}>
+
+                <button
+                  className="mini"
+                  onClick={() => setEditList(l)}
+                >
                   編集
                 </button>
               </div>
+
               {items.length === 0 ? (
                 <p className="empty">ToDoはありません</p>
               ) : (
-                <SortableList items={items} onReorder={reorderTodo} render={(t, h) => row(t, false, h)} />
+                <SortableList
+                  items={items}
+                  onReorder={reorderTodo}
+                  render={(t, h) => row(t, false, h)}
+                />
               )}
             </section>
           )
@@ -232,13 +339,20 @@ export default function ListScreen({
       />
 
       {lower.length > 0 && (
-        <section className="card">
-          <h3>リスト未所属・日付限定</h3>
-          {lower.map((t) => row(t))}
-        </section>
+        <>
+          <ColorSettings />
+
+          <section className="card">
+            <h3>リスト未所属・日付限定</h3>
+            {lower.map((t) => row(t))}
+          </section>
+        </>
       )}
 
-      <button className="addlist" onClick={() => setEditList('new')}>
+      <button
+        className="addlist"
+        onClick={() => setEditList('new')}
+      >
         + リストを作成
       </button>
 
@@ -267,6 +381,7 @@ export default function ListScreen({
           }}
         />
       )}
+
       {editList && (
         <ListEditor
           list={editList === 'new' ? null : editList}
