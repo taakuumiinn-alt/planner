@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import CalendarScreen from './screens/CalendarScreen'
-import OtherScreen from './screens/OtherScreen'
+import ListScreen from './screens/ListScreen'
 import AddMenu from './components/AddMenu'
+import TodoEditor from './components/TodoEditor'
 
-type Tab = 'calendar' | 'other'
+type Tab = 'calendar' | 'list'
 const KEY = 'planner:lastTab'
 
 function loadTab(): Tab {
   try {
-    return localStorage.getItem(KEY) === 'other' ? 'other' : 'calendar'
+    return localStorage.getItem(KEY) === 'list' ? 'list' : 'calendar'
   } catch {
     return 'calendar'
   }
@@ -17,6 +18,8 @@ function loadTab(): Tab {
 export default function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
   const [tab, setTab] = useState<Tab>(loadTab)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [addingTodo, setAddingTodo] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
 
   const changeTab = (t: Tab) => {
@@ -30,6 +33,10 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
 
   const onPick = (label: string) => {
     setMenuOpen(false)
+    if (label === 'ToDoを追加') {
+      setAddingTodo(true)
+      return
+    }
     setToast(`「${label}」は次のステップで実装します`)
     setTimeout(() => setToast(''), 2500)
   }
@@ -37,7 +44,7 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
   return (
     <div className="shell">
       <header className="topbar">
-        <h2>{tab === 'calendar' ? 'カレンダー' : 'その他'}</h2>
+        <h2>{tab === 'calendar' ? 'カレンダー' : 'リスト'}</h2>
         <button className="plus" aria-label="新規作成" onClick={() => setMenuOpen(true)}>
           +
         </button>
@@ -47,7 +54,7 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
         {tab === 'calendar' ? (
           <CalendarScreen />
         ) : (
-          <OtherScreen email={email} onSignOut={onSignOut} />
+          <ListScreen email={email} onSignOut={onSignOut} reloadKey={reloadKey} />
         )}
       </main>
 
@@ -55,12 +62,22 @@ export default function Shell({ email, onSignOut }: { email: string; onSignOut: 
         <button className={tab === 'calendar' ? 'on' : ''} onClick={() => changeTab('calendar')}>
           カレンダー
         </button>
-        <button className={tab === 'other' ? 'on' : ''} onClick={() => changeTab('other')}>
-          その他
+        <button className={tab === 'list' ? 'on' : ''} onClick={() => changeTab('list')}>
+          リスト
         </button>
       </nav>
 
       {menuOpen && <AddMenu onPick={onPick} onClose={() => setMenuOpen(false)} />}
+      {addingTodo && (
+        <TodoEditor
+          todo={null}
+          onClose={() => setAddingTodo(false)}
+          onSaved={() => {
+            setAddingTodo(false)
+            setReloadKey((k) => k + 1)
+          }}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

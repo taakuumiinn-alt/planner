@@ -126,4 +126,39 @@ input {
 .logout {
   margin-top: 8px; padding: 10px 14px; border: 1px solid #2a2a40;
   border-radius: 10px; background: transparent; color: var(--text); font-size: 15px;
+.sheet.form { max-height: 88dvh; overflow-y: auto; }
+.sheet.form h3 { margin: 0 0 4px; }
+.sheet.form input, .sheet.form select, .sheet.form textarea {
+  width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2a2a40;
+  background: #10101a; color: var(--text); font-size: 16px; font-family: inherit;
 }
+.sheet.form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #8a8aa5; }
+.sheet.form label.check { flex-direction: row; align-items: center; color: var(--text); font-size: 15px; }
+.sheet.form input[type='checkbox'] { width: auto; }
+.sheet.form input[type='color'] { width: 44px; height: 36px; padding: 2px; }
+.sheet.form button.primary { background: var(--accent); color: #fff; }
+.sheet.form button.danger { background: transparent; color: #f87171; }
+.picker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picker .pick { width: 40px; padding: 8px 0; font-size: 20px; background: #1e1e33; border-radius: 10px; }
+.picker .pick.on { box-shadow: 0 0 0 2px var(--accent2); }
+.picker .swatch { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+.picker .swatch.on { border-color: #fff; }
+.err { color: #f87171; font-size: 14px; margin: 0; }
+
+.chead { display: flex; align-items: center; justify-content: space-between; }
+.mini { border: 1px solid #2a2a40; border-radius: 8px; background: transparent; color: #8a8aa5; padding: 4px 10px; font-size: 13px; }
+.late-card { border-color: #7f1d1d; }
+.late-card h3 { color: #f87171; }
+.today-card { border-color: var(--accent); box-shadow: 0 0 12px rgba(139, 92, 246, 0.35); }
+.card.muted { opacity: 0.8; }
+.addlist {
+  padding: 12px; border: 1px dashed #3a3a58; border-radius: 12px;
+  background: transparent; color: var(--accent2); font-size: 15px;
+}
+.trow { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.circle { width: 24px; height: 24px; min-width: 24px; border-radius: 50%; border: 2px solid; padding: 0; }
+.tmain { flex: 1; min-width: 0; cursor: pointer; }
+.ttitle { font-size: 16px; overflow-wrap: anywhere; }
+.ttitle.done { text-decoration: line-through; color: #8a8aa5; }
+.tdue { font-size: 12px; color: #8a8aa5; margin-top: 2px; }
+.tdue.late { color: #f87171; }}
