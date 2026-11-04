@@ -149,12 +149,7 @@ export default function ListScreen({
   const lower = rest.filter((t) => t.date_only || !t.list_id).sort(byDue)
 
   const row = (t: Todo, completedView = false, handle?: HandleProps) => (
-    <div key={t.id} className="trow">
-      {handle && (
-        <button className="grip" aria-label="並び替え" {...handle}>
-          ⋮⋮
-        </button>
-      )}
+        <div key={t.id} className="trow" {...handle}>
       <button
         className="circle"
         style={{ borderColor: colorOf(t), background: completedView ? colorOf(t) : 'transparent' }}
@@ -218,11 +213,8 @@ export default function ListScreen({
           const items = rest.filter((t) => t.list_id === l.id && !t.date_only)
           return (
             <section className="card" style={{ borderLeft: `4px solid ${l.color}` }}>
-              <div className="chead">
+                            <div className="chead" {...handle}>
                 <h3>
-                  <button className="grip" aria-label="リストを並び替え" {...handle}>
-                    ⋮⋮
-                  </button>
                   {l.icon} {l.name}
                 </h3>
                 <button className="mini" onClick={() => setEditList(l)}>

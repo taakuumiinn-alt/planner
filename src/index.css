@@ -171,4 +171,8 @@ input {
   padding: 8px 12px; min-width: 40px; border-radius: 10px;
   background: #1e1e33; color: var(--text); font-size: 15px;
 }
-.sheet.form .chip.on { background: var(--accent); color: #fff; }}
+.sheet.form .chip.on { background: var(--accent); color: #fff; }.drag-item {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}}
