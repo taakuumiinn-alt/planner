@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { LIST_COLS, TODO_COLS } from '../lib/types'
 import type { Todo, TodoList } from '../lib/types'
 import { fmt, todayStr } from '../lib/date'
+import { diffDays, nextDue, parseRule, shiftDate, shiftIso } from '../lib/repeat'
 import TodoEditor from '../components/TodoEditor'
 import ListEditor from '../components/ListEditor'
+import SortableList from '../components/SortableList'
+import type { HandleProps } from '../components/SortableList'
 
 const DEFAULT_COLOR = '#8b5cf6'
 
@@ -25,16 +29,8 @@ export default function ListScreen({
 
   const load = useCallback(async () => {
     const [l, t] = await Promise.all([
-      supabase
-        .from('todo_lists')
-        .select('id,name,color,icon,sort_order,show_on_lock,done_list_name')
-        .is('deleted_at', null)
-        .order('sort_order'),
-      supabase
-        .from('todos')
-        .select('id,list_id,title,detail,start_date,due_date,date_only,sort_order,completed_at,was_overdue')
-        .is('deleted_at', null)
-        .order('sort_order'),
+      supabase.from('todo_lists').select(LIST_COLS).is('deleted_at', null).order('sort_order'),
+      supabase.from('todos').select(TODO_COLS).is('deleted_at', null).order('sort_order'),
     ])
     if (l.error || t.error) {
       setError((l.error ?? t.error)!.message)
@@ -54,6 +50,50 @@ export default function ListScreen({
   const colorOf = (t: Todo) => lists.find((l) => l.id === t.list_id)?.color ?? DEFAULT_COLOR
   const byDue = (a: Todo, b: Todo) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
 
+  const reorderTodo = async (id: string, order: number) => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, sort_order: order } : t)).sort((a, b) => a.sort_order - b.sort_order),
+    )
+    const { error } = await supabase.from('todos').update({ sort_order: order }).eq('id', id)
+    if (error) {
+      setError(error.message)
+      load()
+    }
+  }
+
+  const reorderList = async (id: string, order: number) => {
+    setLists((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, sort_order: order } : l)).sort((a, b) => a.sort_order - b.sort_order),
+    )
+    const { error } = await supabase.from('todo_lists').update({ sort_order: order }).eq('id', id)
+    if (error) {
+      setError(error.message)
+      load()
+    }
+  }
+
+  const createNext = async (t: Todo) => {
+    const rule = parseRule(t.repeat_rule)
+    if (!rule || !t.due_date) return
+    const next = nextDue(rule, t.due_date, today)
+    if (!next) return
+    const diff = diffDays(t.due_date, next)
+    const { error } = await supabase.from('todos').insert({
+      list_id: t.list_id,
+      title: t.title,
+      detail: t.detail,
+      date_only: t.date_only,
+      due_date: next,
+      start_date: t.start_date ? shiftDate(t.start_date, diff) : null,
+      sort_order: t.sort_order,
+      repeat_rule: t.repeat_rule,
+      notify_enabled: t.notify_enabled,
+      notify_at: t.notify_at ? shiftIso(t.notify_at, diff) : null,
+      remind_days_before: t.remind_days_before,
+    })
+    if (error) setError(error.message)
+  }
+
   const complete = async (t: Todo) => {
     const list = lists.find((l) => l.id === t.list_id)
     if (list && !list.done_list_name) {
@@ -67,13 +107,37 @@ export default function ListScreen({
       .from('todos')
       .update({ completed_at: new Date().toISOString(), was_overdue: overdue })
       .eq('id', t.id)
-    if (error) setError(error.message)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    if (t.repeat_rule) await createNext(t)
     load()
   }
 
   const undo = async (t: Todo) => {
     const { error } = await supabase.from('todos').update({ completed_at: null }).eq('id', t.id)
-    if (error) setError(error.message)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    // 繰り返しToDoは、完了時に作られた次回分を取り消す(二重にならないように)
+    const rule = parseRule(t.repeat_rule)
+    if (rule && t.due_date) {
+      const next = nextDue(rule, t.due_date, today)
+      const dup = todos.find(
+        (x) =>
+          !x.completed_at &&
+          x.id !== t.id &&
+          x.title === t.title &&
+          x.list_id === t.list_id &&
+          x.repeat_rule === t.repeat_rule &&
+          x.due_date === next,
+      )
+      if (dup) {
+        await supabase.from('todos').update({ deleted_at: new Date().toISOString() }).eq('id', dup.id)
+      }
+    }
     load()
   }
 
@@ -84,8 +148,13 @@ export default function ListScreen({
   const rest = active.filter((t) => !overdue.includes(t) && !todayOnly.includes(t))
   const lower = rest.filter((t) => t.date_only || !t.list_id).sort(byDue)
 
-  const row = (t: Todo, completedView = false) => (
+  const row = (t: Todo, completedView = false, handle?: HandleProps) => (
     <div key={t.id} className="trow">
+      {handle && (
+        <button className="grip" aria-label="並び替え" {...handle}>
+          ⋮⋮
+        </button>
+      )}
       <button
         className="circle"
         style={{ borderColor: colorOf(t), background: completedView ? colorOf(t) : 'transparent' }}
@@ -99,6 +168,8 @@ export default function ListScreen({
             {t.start_date ? `${fmt(t.start_date)} → ` : ''}
             {t.due_date ? fmt(t.due_date) : ''}
             {t.date_only ? '(日付限定)' : ''}
+            {t.repeat_rule ? ' 🔁' : ''}
+            {t.notify_enabled ? ' 🔔' : ''}
             {completedView && t.was_overdue ? ' 期限切れだった' : ''}
           </div>
         )}
@@ -140,22 +211,33 @@ export default function ListScreen({
         </section>
       )}
 
-      {lists.map((l) => {
-        const items = rest.filter((t) => t.list_id === l.id && !t.date_only)
-        return (
-          <section key={l.id} className="card" style={{ borderLeft: `4px solid ${l.color}` }}>
-            <div className="chead">
-              <h3>
-                {l.icon} {l.name}
-              </h3>
-              <button className="mini" onClick={() => setEditList(l)}>
-                編集
-              </button>
-            </div>
-            {items.length === 0 ? <p className="empty">ToDoはありません</p> : items.map((t) => row(t))}
-          </section>
-        )
-      })}
+      <SortableList
+        items={lists}
+        onReorder={reorderList}
+        render={(l, handle) => {
+          const items = rest.filter((t) => t.list_id === l.id && !t.date_only)
+          return (
+            <section className="card" style={{ borderLeft: `4px solid ${l.color}` }}>
+              <div className="chead">
+                <h3>
+                  <button className="grip" aria-label="リストを並び替え" {...handle}>
+                    ⋮⋮
+                  </button>
+                  {l.icon} {l.name}
+                </h3>
+                <button className="mini" onClick={() => setEditList(l)}>
+                  編集
+                </button>
+              </div>
+              {items.length === 0 ? (
+                <p className="empty">ToDoはありません</p>
+              ) : (
+                <SortableList items={items} onReorder={reorderTodo} render={(t, h) => row(t, false, h)} />
+              )}
+            </section>
+          )
+        }}
+      />
 
       {lower.length > 0 && (
         <section className="card">

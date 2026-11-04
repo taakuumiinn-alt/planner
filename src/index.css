@@ -161,4 +161,14 @@ input {
 .ttitle { font-size: 16px; overflow-wrap: anywhere; }
 .ttitle.done { text-decoration: line-through; color: #8a8aa5; }
 .tdue { font-size: 12px; color: #8a8aa5; margin-top: 2px; }
-.tdue.late { color: #f87171; }}
+.tdue.late { color: #f87171; }.grip {
+  width: auto; border: 0; background: transparent; color: #8a8aa5;
+  padding: 4px 6px; font-size: 16px; cursor: grab; touch-action: none;
+}
+.chead h3 { display: flex; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sheet.form .chip {
+  padding: 8px 12px; min-width: 40px; border-radius: 10px;
+  background: #1e1e33; color: var(--text); font-size: 15px;
+}
+.sheet.form .chip.on { background: var(--accent); color: #fff; }}
